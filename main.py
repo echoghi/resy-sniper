@@ -146,7 +146,11 @@ def main_loop():
         if current_date >= DAY:
             log_info("Date has passed, stopping the search.")
             break
-        check_availability()
+        try:
+            check_availability()
+        except Exception as e:
+            log_error(f"An error occurred while checking availability: {e}")
+
         time.sleep(INTERVAL)
 
 
