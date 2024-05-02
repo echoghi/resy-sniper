@@ -10,6 +10,9 @@ A python bot to automate the process of finding and booking reservations at a sp
 
 ### Venue IDs
 
-- Tatiana (New York): 65452
+- Tatiana (NY): 65452
+- Via Carota (NY): 2567
 - Ettan (Palo Alto): 68393
 - Nari (SF): 984
+- Rich Table (SF): 5785
+- 7 Adams (SF): 73535

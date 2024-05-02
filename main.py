@@ -1,5 +1,6 @@
 import requests
 import time
+import json
 import urllib.parse
 from datetime import datetime
 
@@ -7,10 +8,14 @@ from log_utils import log_error, log_success, log_info
 from utils import get_headers, format_slot
 
 
+# Bot Configuration
+INTERVAL = 9  # seconds
+NO_RESERVATION = True
+
 # Venue Configuration
-VENUE_ID = 984
+VENUE_ID = 2567
 PARTY_SIZE = 2
-DAY = "2024-05-31"
+DAY = "2024-05-25"
 
 
 def check_availability():
@@ -73,7 +78,7 @@ def get_reservation_details(config_id):
     headers = get_headers({
         'X-Origin': 'https://widgets.resy.com',
         'Origin': 'https://widgets.resy.com',
-        'Referer': 'https://widgets.resy.com',
+        'Referer': 'https://widgets.resy.com/',
         "Content-Type": "application/json",
     })
 
@@ -82,7 +87,10 @@ def get_reservation_details(config_id):
         "day": DAY,
         "party_size": PARTY_SIZE
     }
-    response = requests.post(url, headers=headers, json=body)
+    encoded_params = urllib.parse.urlencode(body)
+    full_url = f"{url}?{encoded_params}"
+
+    response = requests.get(full_url, headers=headers)
     if response.status_code == 200:
         return response.json()
     else:
@@ -93,41 +101,54 @@ def get_reservation_details(config_id):
 
 def book_reservation(slot):
     details = get_reservation_details(slot['config']['token'])
+
     if not details:
         return "Failed to get reservation details"
 
-    payment_method_id = details.user.payment_methods[0].id
-    book_token = details.book_token.value
+    payment_method_id = details['user']['payment_methods'][0]['id']
+    book_token = details['book_token']['value']
 
     # URL and headers setup for booking reservation
     url = "https://api.resy.com/3/book"
     headers = get_headers({
         "Content-Type": "application/x-www-form-urlencoded",
         "X-Origin": "https://widgets.resy.com",
+        'Origin': 'https://widgets.resy.com',
         "Referer": "https://widgets.resy.com/",
     })
     # Form data for the POST request
     data = {
         "book_token": book_token,
-        "struct_payment_method": json.dumps({"id": payment_method_id}),
+        "struct_payment_method": f'{{"id":{payment_method_id}}}',
         "source_id": "resy.com-venue-details"
     }
     # Use urllib to encode the form data
     encoded_data = urllib.parse.urlencode(data)
 
+    log_info("Attempting to snipe reservation...")
+
     response = requests.post(url, headers=headers, data=encoded_data)
-    if response.status_code == 200:
+    if response.status_code == 201:
+        log_success(f"Reservation successfully booked!")
+        NO_RESERVATION = False
         return response.json()
     else:
-        log_error(f"Failed to book reservation: {response.status_code}")
+        log_error(
+            f"Failed to book reservation: {response.status_code}, Reason: {response.text}")
         return response.text
 
 
-# Schedule the task to run every 15 seconds
-while True:
-    current_date = datetime.now().strftime('%Y-%m-%d')
-    if current_date >= DAY:
-        log_info("Date has passed, stopping the search.")
-        break
-    check_availability()
-    time.sleep(15)
+def main_loop():
+    global NO_RESERVATION
+
+    while NO_RESERVATION:
+        current_date = datetime.now().strftime('%Y-%m-%d')
+        if current_date >= DAY:
+            log_info("Date has passed, stopping the search.")
+            break
+        check_availability()
+        time.sleep(INTERVAL)
+
+
+if __name__ == '__main__':
+    main_loop()

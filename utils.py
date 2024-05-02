@@ -22,6 +22,7 @@ def get_headers(custom_headers=None):
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
         'Accept-Language': 'en-US,en;q=0.6',
+        "Cache-Control": "no-cache",
     }
 
     # Update default headers with any custom headers provided
